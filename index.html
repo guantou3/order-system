@@ -379,10 +379,26 @@
   var ganttMeta = {DW:0, minDate:null}; // 記錄目前甘特圖比例，供色條拖曳換算日期用
 
   // ---------- storage backend ----------
-  // 在這裡貼上你部署好的 Google Apps Script「網頁應用程式」網址，
-  // 貼上後所有使用者開啟這個網頁，都會讀寫同一份 Google Sheet 資料，達成多人共用。
-  // 若留空，則維持原本的單機儲存（Claude.ai 內用 window.storage，一般網站空間用 localStorage）。
-  var SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbznkqcOBSnqVIqjrNCmsR19f_cuiilaCLvQnWdAsx8ay556GgiuoMZbCglPpbqLrM_1ug/exec'; // 例如：'https://script.google.com/macros/s/xxxxx/exec'; // 例如：'https://script.google.com/macros/s/xxxxx/exec'
+  // 優先順序：Firebase（即時同步，速度最快）> Google Sheet（有延遲）> 單機儲存
+  //
+  // 【Firebase 設定】到 Firebase 主控台建立專案、啟用 Firestore 後，
+  // 把「專案設定」裡的 firebaseConfig 內容貼進下面的 FIREBASE_CONFIG。
+  // 留空（apiKey 為空字串）則不啟用 Firebase。
+  var FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyAl6xdyCXhc5oboiwgNZyAKttpNxHsFCc4',
+    authDomain: 'odsystem-a80e0.firebaseapp.com',
+    projectId: 'odsystem-a80e0',
+    storageBucket: 'odsystem-a80e0.firebasestorage.app',
+    messagingSenderId: '388451537321',
+    appId: '1:388451537321:web:1c54f8a2ae86a3f75274b8'
+  };
+
+  // 【Google Sheet 設定】貼上部署好的 Apps Script 網頁應用程式網址。
+  // 留空則維持單機儲存（Claude.ai 內用 window.storage，一般網站空間用 localStorage）。
+  var SHEET_API_URL = ''; // 例如：'https://script.google.com/macros/s/xxxxx/exec'
+
+  var USE_FIREBASE = !!(FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey);
+  var firestoreDocRef = null;
 
   var sheetBackend = {
     get: function(){
@@ -438,17 +454,66 @@
   }
 
   function saveOrders(){
+    if(USE_FIREBASE){
+      if(!firestoreDocRef) return Promise.resolve();
+      return firestoreDocRef.set({
+        json: JSON.stringify(state.orders),
+        updatedAt: new Date().toISOString()
+      }).catch(function(err){ console.error('儲存失敗', err); });
+    }
     return storageBackend.set('orders', JSON.stringify(state.orders)).catch(function(err){
       console.error('儲存失敗', err);
     });
   }
 
-  // 有設定共用資料庫時，定期向 Google Sheet 拉取最新資料，讓其他人的更新也會同步顯示。
-  // 編輯視窗開啟中暫停輪詢，避免正在輸入時畫面被重整。
-  if(SHEET_API_URL){
-    setInterval(function(){
-      if(!state.modal && !state.confirmDialog){ loadOrders(); }
-    }, 8000);
+  function loadScript_(src){
+    return new Promise(function(resolve, reject){
+      var s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = function(){ reject(new Error('無法載入 '+src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function startApp(){
+    if(USE_FIREBASE){
+      loadScript_('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js')
+        .then(function(){
+          return loadScript_('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js');
+        })
+        .then(function(){
+          firebase.initializeApp(FIREBASE_CONFIG);
+          var db = firebase.firestore();
+          firestoreDocRef = db.collection('shopfloor').doc('orders');
+          // 即時監聽：任何人（包含自己）寫入資料，所有開著頁面的人都會立刻收到更新
+          firestoreDocRef.onSnapshot(function(snap){
+            var data = snap.exists ? snap.data() : null;
+            state.orders = (data && data.json) ? JSON.parse(data.json) : [];
+            state.loaded = true;
+            state.refreshing = false;
+            render();
+          }, function(err){
+            console.error('Firestore 讀取失敗', err);
+            state.loaded = true;
+            render();
+          });
+        })
+        .catch(function(err){
+          console.error('Firebase 載入失敗，改用單機儲存', err);
+          USE_FIREBASE = false;
+          loadOrders();
+        });
+    } else {
+      loadOrders();
+      // 有設定 Google Sheet 共用資料庫時，定期拉取最新資料（有延遲，Firebase 則是即時推送不需要輪詢）。
+      // 編輯視窗開啟中暫停輪詢，避免正在輸入時畫面被重整。
+      if(SHEET_API_URL){
+        setInterval(function(){
+          if(!state.modal && !state.confirmDialog){ loadOrders(); }
+        }, 8000);
+      }
+    }
   }
 
   function nextOrderCode(){
@@ -510,7 +575,7 @@
     if(state.view === 'orders'){
       actionBtn = '<button class="btn btn-primary" data-action="new-order">+ 新增訂單</button>';
     }
-    var refreshBtn = SHEET_API_URL
+    var refreshBtn = (USE_FIREBASE || SHEET_API_URL)
       ? '<button class="btn btn-ghost btn-sm" data-action="force-refresh" title="立即向共用資料庫拉取最新資料"'+(state.refreshing?' disabled':'')+'>'+(state.refreshing?'更新中…':'🔄 強制更新')+'</button>'
       : '';
     return '<div class="topbar">' +
@@ -1089,7 +1154,20 @@
       if(!state.refreshing){
         state.refreshing = true;
         render();
-        loadOrders();
+        if(USE_FIREBASE && firestoreDocRef){
+          firestoreDocRef.get({source:'server'}).then(function(snap){
+            var data = snap.exists ? snap.data() : null;
+            state.orders = (data && data.json) ? JSON.parse(data.json) : [];
+            state.refreshing = false;
+            render();
+          }).catch(function(err){
+            console.error('強制更新失敗', err);
+            state.refreshing = false;
+            render();
+          });
+        } else {
+          loadOrders();
+        }
       }
     }
   }
@@ -1146,7 +1224,7 @@
     render();
   }
 
-  loadOrders();
+  startApp();
 })();
 </script>
 </body>
