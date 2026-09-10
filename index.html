@@ -346,7 +346,8 @@
     modal: null, // {mode:'add'|'edit', order:{...}, error:''}
     confirmDialog: null, // {message, onConfirm}
     railOpen: false,
-    productionSubView: 'kanban' // 'kanban' | 'gantt'
+    productionSubView: 'kanban', // 'kanban' | 'gantt'
+    refreshing: false
   };
 
   // ---------- storage helpers ----------
@@ -381,7 +382,7 @@
   // 在這裡貼上你部署好的 Google Apps Script「網頁應用程式」網址，
   // 貼上後所有使用者開啟這個網頁，都會讀寫同一份 Google Sheet 資料，達成多人共用。
   // 若留空，則維持原本的單機儲存（Claude.ai 內用 window.storage，一般網站空間用 localStorage）。
-  var SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbznkqcOBSnqVIqjrNCmsR19f_cuiilaCLvQnWdAsx8ay556GgiuoMZbCglPpbqLrM_1ug/exec'; // 例如：'https://script.google.com/macros/s/xxxxx/exec'
+  var SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbznkqcOBSnqVIqjrNCmsR19f_cuiilaCLvQnWdAsx8ay556GgiuoMZbCglPpbqLrM_1ug/exec'; // 例如：'https://script.google.com/macros/s/xxxxx/exec'; // 例如：'https://script.google.com/macros/s/xxxxx/exec'
 
   var sheetBackend = {
     get: function(){
@@ -426,10 +427,12 @@
     storageBackend.get('orders').then(function(value){
       state.orders = value ? JSON.parse(value) : [];
       state.loaded = true;
+      state.refreshing = false;
       render();
     }).catch(function(err){
       console.error('讀取失敗', err);
       state.loaded = true;
+      state.refreshing = false;
       render();
     });
   }
@@ -507,12 +510,15 @@
     if(state.view === 'orders'){
       actionBtn = '<button class="btn btn-primary" data-action="new-order">+ 新增訂單</button>';
     }
+    var refreshBtn = SHEET_API_URL
+      ? '<button class="btn btn-ghost btn-sm" data-action="force-refresh" title="立即向共用資料庫拉取最新資料"'+(state.refreshing?' disabled':'')+'>'+(state.refreshing?'更新中…':'🔄 強制更新')+'</button>'
+      : '';
     return '<div class="topbar">' +
       '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' +
         '<button class="btn btn-ghost rail-toggle" data-action="toggle-rail" aria-label="選單">☰</button>' +
         '<div><h1>'+t.h+'</h1><div class="sub">'+t.sub+'</div></div>' +
       '</div>' +
-      '<div>'+actionBtn+'</div>' +
+      '<div style="display:flex; align-items:center; gap:8px;">'+refreshBtn+actionBtn+'</div>' +
     '</div>';
   }
 
@@ -1079,6 +1085,12 @@
     } else if(action === 'close-rail'){
       state.railOpen = false;
       render();
+    } else if(action === 'force-refresh'){
+      if(!state.refreshing){
+        state.refreshing = true;
+        render();
+        loadOrders();
+      }
     }
   }
 
