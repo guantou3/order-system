@@ -343,6 +343,7 @@
     loaded: false,
     search: '',
     statusFilter: '全部',
+    sortBy: 'created_desc', // 'created_desc' | 'orderDate_desc' | 'orderDate_asc' | 'dueDate_asc' | 'dueDate_desc'
     modal: null, // {mode:'add'|'edit', order:{...}, error:''}
     confirmDialog: null, // {message, onConfirm}
     railOpen: false,
@@ -654,13 +655,30 @@
   }
 
   // ---------- Orders ----------
+  var SORT_OPTIONS = [
+    {key:'created_desc',  label:'建立時間（最新優先）'},
+    {key:'orderDate_desc', label:'訂單日期（新到舊）'},
+    {key:'orderDate_asc',  label:'訂單日期（舊到新）'},
+    {key:'dueDate_asc',    label:'交期（近到遠）'},
+    {key:'dueDate_desc',   label:'交期（遠到近）'}
+  ];
+
   function filteredOrders(){
-    return state.orders.filter(function(o){
+    var list = state.orders.filter(function(o){
       var matchesSearch = !state.search ||
         (o.customer+o.product+(o.spec||'')+o.code).toLowerCase().indexOf(state.search.toLowerCase()) >= 0;
       var matchesStatus = state.statusFilter === '全部' || o.status === state.statusFilter;
       return matchesSearch && matchesStatus;
-    }).sort(function(a,b){ return (b.createdAt||'').localeCompare(a.createdAt||''); });
+    });
+
+    var sortBy = state.sortBy || 'created_desc';
+    return list.sort(function(a,b){
+      if(sortBy === 'orderDate_desc') return (b.orderDate||'').localeCompare(a.orderDate||'');
+      if(sortBy === 'orderDate_asc')  return (a.orderDate||'').localeCompare(b.orderDate||'');
+      if(sortBy === 'dueDate_asc')    return (a.dueDate||'9999').localeCompare(b.dueDate||'9999');
+      if(sortBy === 'dueDate_desc')   return (b.dueDate||'0000').localeCompare(a.dueDate||'0000');
+      return (b.createdAt||'').localeCompare(a.createdAt||'');
+    });
   }
 
   function renderOrders(){
@@ -670,6 +688,9 @@
       '<input type="text" id="search-input" placeholder="搜尋客戶或產品" value="'+esc(state.search)+'">' +
       '<select id="status-filter">' + statusOptions.map(function(s){
         return '<option value="'+s+'" '+(s===state.statusFilter?'selected':'')+'>'+s+'</option>';
+      }).join('') + '</select>' +
+      '<select id="sort-select">' + SORT_OPTIONS.map(function(s){
+        return '<option value="'+s.key+'" '+(s.key===state.sortBy?'selected':'')+'>'+s.label+'</option>';
       }).join('') + '</select>' +
       '<div class="spacer"></div>' +
     '</div>';
@@ -995,6 +1016,13 @@
     if(statusFilter){
       statusFilter.addEventListener('change', function(){
         state.statusFilter = statusFilter.value;
+        render();
+      });
+    }
+    var sortSelect = document.getElementById('sort-select');
+    if(sortSelect){
+      sortSelect.addEventListener('change', function(){
+        state.sortBy = sortSelect.value;
         render();
       });
     }
