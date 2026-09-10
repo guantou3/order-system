@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>工單控制台 · 訂單與生產管理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#EEF0EF;
+    --panel:#FFFFFF;
+    --ink:#1E2A2F;
+    --ink-soft:#5B6B70;
+    --line:#D6DAD9;
+    --line-strong:#B6BDBC;
+    --steel:#2A6F97;
+    --steel-dark:#1F5273;
+    --steel-tint:#E3EEF3;
+    --amber:#C97A1A;
+    --amber-tint:#FBEEDD;
+    --green:#3F7D53;
+    --green-tint:#E7F1E9;
+    --rust:#B5482C;
+    --rust-tint:#F7E7E2;
+    --plum:#7A4EA8;
+    --plum-tint:#EEE7F5;
+    --grey-tint:#EBEDEC;
+    --rail:#1E2A2F;
+    --rail-text:#C9D2D1;
+    --rail-text-dim:#7C8B8A;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'IBM Plex Sans', sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  #app{display:flex; min-height:100vh;}
+
+  /* ---------- Rail ---------- */
+  .rail{
+    width:220px; flex-shrink:0;
+    background:var(--rail); color:var(--rail-text);
+    display:flex; flex-direction:column;
+    position:sticky; top:0; height:100vh;
+  }
+  .rail-brand{
+    padding:22px 20px 18px 20px;
+    border-bottom:1px solid #2E3A3E;
+  }
+  .rail-brand .mark{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px; letter-spacing:.08em;
+    color:var(--amber);
+    margin-bottom:6px;
+  }
+  .rail-brand .title{
+    font-size:17px; font-weight:600; color:#fff; line-height:1.3;
+  }
+  .rail-nav{padding:14px 0; flex:1;}
+  .rail-item{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 20px;
+    font-size:14px; font-weight:500;
+    color:var(--rail-text-dim);
+    cursor:pointer;
+    border-left:3px solid transparent;
+  }
+  .rail-item:hover{color:var(--rail-text);}
+  .rail-item.active{
+    color:#fff; border-left-color:var(--amber);
+    background:rgba(255,255,255,0.04);
+  }
+  .rail-item .dot{width:6px;height:6px;border-radius:50%;background:currentColor; opacity:.7;}
+  .rail-foot{
+    padding:16px 20px; border-top:1px solid #2E3A3E;
+    font-size:11px; color:var(--rail-text-dim); line-height:1.6;
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  /* ---------- Main ---------- */
+  .main{flex:1; min-width:0; display:flex; flex-direction:column;}
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 32px; border-bottom:1px solid var(--line);
+    background:var(--panel);
+  }
+  .topbar h1{font-size:19px; margin:0; font-weight:600;}
+  .topbar .sub{font-size:12.5px; color:var(--ink-soft); margin-top:3px;}
+  .content{padding:28px 32px 60px 32px; flex:1;}
+
+  button{font-family:inherit; cursor:pointer;}
+  .btn{
+    border:1px solid var(--line-strong); background:var(--panel);
+    color:var(--ink); padding:8px 14px; font-size:13.5px; font-weight:500;
+    border-radius:3px;
+  }
+  .btn:hover{border-color:var(--steel); color:var(--steel-dark);}
+  .btn-primary{
+    background:var(--steel); border-color:var(--steel); color:#fff;
+  }
+  .btn-primary:hover{background:var(--steel-dark); border-color:var(--steel-dark); color:#fff;}
+  .btn-ghost{border-color:transparent; background:transparent; padding:6px 8px;}
+  .btn-ghost:hover{background:var(--grey-tint);}
+  .btn-sm{padding:5px 10px; font-size:12.5px;}
+  .btn-danger-ghost{color:var(--rust); border-color:transparent; background:transparent;}
+  .btn-danger-ghost:hover{background:var(--rust-tint);}
+
+  /* ---------- Dashboard ---------- */
+  .stat-row{display:flex; gap:14px; margin-bottom:26px; flex-wrap:wrap;}
+  .stat-block{
+    background:var(--panel); border:1px solid var(--line);
+    padding:16px 20px; min-width:140px; flex:1;
+  }
+  .stat-block .num{font-family:'IBM Plex Mono', monospace; font-size:28px; font-weight:600;}
+  .stat-block .label{font-size:12.5px; color:var(--ink-soft); margin-top:4px;}
+  .panel{
+    background:var(--panel); border:1px solid var(--line); padding:20px 22px; margin-bottom:20px;
+  }
+  .panel h2{font-size:14px; margin:0 0 14px 0; font-weight:600; color:var(--ink);}
+  .bar-row{display:flex; align-items:center; gap:12px; margin-bottom:10px; font-size:13px;}
+  .bar-row .bar-label{width:78px; flex-shrink:0; color:var(--ink-soft);}
+  .bar-track{flex:1; height:8px; background:var(--grey-tint); position:relative;}
+  .bar-fill{height:100%;}
+  .bar-row .bar-count{width:30px; text-align:right; font-family:'IBM Plex Mono', monospace; flex-shrink:0;}
+  .upcoming-row{
+    display:grid; grid-template-columns:84px minmax(0,1fr) 92px;
+    align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line);
+  }
+  .upcoming-row:last-child{border-bottom:none;}
+  .upcoming-row.head{
+    font-size:11px; font-weight:600; color:var(--ink-soft);
+    border-bottom:1px solid var(--line-strong); padding-bottom:8px;
+  }
+  .upcoming-row .cell-ellipsis{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .upcoming-row .cell-due{text-align:right;}
+  .empty-state{
+    text-align:center; padding:50px 20px; color:var(--ink-soft);
+  }
+  .empty-state .big{font-size:15px; color:var(--ink); font-weight:600; margin-bottom:6px;}
+  .empty-state .small{font-size:13px; margin-bottom:18px;}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{display:flex; gap:10px; margin-bottom:18px; align-items:center; flex-wrap:wrap;}
+  .toolbar input[type=text], .toolbar select{
+    border:1px solid var(--line-strong); padding:8px 10px; font-size:13.5px;
+    font-family:inherit; background:#fff; color:var(--ink); border-radius:3px;
+  }
+  .toolbar .spacer{flex:1;}
+
+  /* ---------- Table ---------- */
+  table{width:100%; min-width:760px; border-collapse:collapse; background:var(--panel); border:1px solid var(--line);}
+  thead th{
+    text-align:left; font-size:11.5px; font-weight:600; color:var(--ink-soft);
+    padding:10px 14px; border-bottom:1px solid var(--line-strong);
+    background:#F7F8F7;
+  }
+  tbody td{
+    padding:12px 14px; border-bottom:1px solid var(--line); font-size:13.5px; vertical-align:middle;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#FAFBFA;}
+  td.code, .code{font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--ink);}
+  .actions-cell{display:flex; gap:4px; flex-wrap:wrap;}
+
+  .tag{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; font-weight:500; padding:3px 9px 3px 8px;
+    border-left:3px solid; background:var(--grey-tint); color:var(--ink);
+  }
+  .tag.st-pending{border-color:var(--ink-soft); background:var(--grey-tint);}
+  .tag.st-inprogress{border-color:var(--amber); background:var(--amber-tint); color:#8A5714;}
+  .tag.st-done{border-color:var(--green); background:var(--green-tint); color:#295C3B;}
+  .tag.st-shipped{border-color:var(--steel); background:var(--steel-tint); color:var(--steel-dark);}
+  .tag.st-cancelled{border-color:var(--rust); background:var(--rust-tint); color:var(--rust);}
+
+  /* ---------- Kanban ---------- */
+  .kanban{display:flex; gap:14px; align-items:flex-start; overflow-x:auto; padding-bottom:10px;}
+  .kanban-col{
+    flex:1; min-width:250px; background:#F3F4F3; border:1px solid var(--line);
+  }
+  .kanban-col-head{
+    padding:12px 14px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:13px; font-weight:600;
+  }
+  .kanban-col-head .count{font-family:'IBM Plex Mono', monospace; color:var(--ink-soft); font-weight:400; font-size:12px;}
+  .kanban-col-head .stripe{width:10px; height:10px; display:inline-block; margin-right:8px;}
+  .kanban-cards{padding:10px; display:flex; flex-direction:column; gap:10px; min-height:60px;}
+  .kcard{
+    background:var(--panel); border:1px solid var(--line); padding:12px 13px;
+  }
+  .kcard .kcode{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-soft);}
+  .kcard .kproduct{font-size:14px; font-weight:600; margin:3px 0 2px 0;}
+  .kcard .kcustomer{font-size:12.5px; color:var(--ink-soft); margin-bottom:8px;}
+  .kcard .progress-row{display:flex; align-items:center; gap:8px; margin-bottom:9px;}
+  .kcard .ptrack{flex:1; height:6px; background:var(--grey-tint);}
+  .kcard .pfill{height:100%; background:var(--steel);}
+  .kcard .ptext{font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-soft); flex-shrink:0;}
+  .kcard input[type=number]{
+    width:56px; border:1px solid var(--line-strong); padding:3px 5px; font-family:'IBM Plex Mono', monospace; font-size:12px; border-radius:2px;
+  }
+  .kcard input[type=text].assignee{
+    width:100%; border:1px solid var(--line-strong); padding:4px 6px; font-size:12.5px; border-radius:2px; margin-bottom:8px;
+  }
+  .kcard .field-label{font-size:11px; color:var(--ink-soft); margin-bottom:3px;}
+  .kcard .kactions{display:flex; gap:6px; margin-top:8px;}
+  .kcard .kactions button{flex:1;}
+
+  /* ---------- Gantt ---------- */
+  .gantt-legend{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px; font-size:12.5px; color:var(--ink-soft);}
+  .glegend-item{display:flex; align-items:center; gap:6px;}
+  .gdot{width:9px; height:9px; display:inline-block; border-radius:2px; flex-shrink:0;}
+  .gantt-scroll-outer{overflow-x:auto; border:1px solid var(--line); background:var(--panel);}
+  .gantt-content{position:relative; width:max-content; min-width:100%;}
+  .grow{display:flex; border-bottom:1px solid var(--line);}
+  .grow:last-child{border-bottom:none;}
+  .grow.ghead{border-bottom:1px solid var(--line-strong);}
+  .gcell-side{
+    width:240px; flex-shrink:0; position:sticky; left:0; z-index:3;
+    border-right:1px solid var(--line-strong);
+    padding:10px 14px; display:flex; flex-direction:column; justify-content:center;
+    background:var(--panel);
+  }
+  .ghead .gcell-side{font-size:12.5px; font-weight:600; color:var(--ink-soft); background:#F7F8F7; justify-content:flex-end; padding-bottom:8px;}
+  .gside-code{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-soft);}
+  .gside-name{font-size:14.5px; font-weight:600; margin:2px 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .gside-cust{font-size:12.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .gcell-time{position:relative; flex-shrink:0; min-height:68px;}
+  .ghead .gcell-time{min-height:auto; background:#F7F8F7;}
+  .gmonth-row{display:flex;}
+  .gmonth{flex-shrink:0; font-size:12px; font-weight:600; color:var(--ink-soft); padding:7px 0 3px 6px; border-left:1px solid var(--line);}
+  .gweekday-row{display:flex;}
+  .gweekday{flex-shrink:0; font-family:'IBM Plex Mono', monospace; font-size:11px; text-align:center; color:var(--ink-soft); padding:3px 0; border-left:1px solid var(--line);}
+  .gweekday.weekend{background:#F2EFE8; color:var(--rust);}
+  .gday-row{display:flex;}
+  .gday{flex-shrink:0; font-family:'IBM Plex Mono', monospace; font-size:12px; text-align:center; color:var(--ink-soft); padding-bottom:8px; border-left:1px solid var(--line);}
+  .gday.weekend{background:#F2EFE8;}
+  .gbar{
+    position:absolute; top:17px; height:34px; border-radius:3px;
+    display:flex; align-items:center; overflow:hidden;
+    box-shadow:0 1px 2px rgba(30,42,47,0.18);
+  }
+  .gbar-fixed{cursor:pointer;}
+  .gbar-drag{cursor:grab; touch-action:none;}
+  .gbar-drag:hover{filter:brightness(1.08);}
+  .gbar-drag.dragging{
+    cursor:grabbing; box-shadow:0 6px 14px rgba(30,42,47,0.35);
+    z-index:6; filter:brightness(1.05);
+  }
+  .gbar:hover{filter:brightness(1.08);}
+  .gbar-label{position:relative; z-index:1; font-size:13px; font-weight:600; padding:0 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,0.18);}
+  .gtoday-line{position:absolute; top:0; bottom:0; width:1px; background:var(--rust); z-index:4; pointer-events:none;}
+  .gtoday-line span{position:absolute; top:-1px; left:4px; font-size:10px; color:var(--rust); font-family:'IBM Plex Mono', monospace; white-space:nowrap;}
+  .gdue-marker{
+    position:absolute; top:7px; width:9px; height:9px; transform:rotate(45deg);
+    border:2px solid; background:#fff; z-index:2; pointer-events:none;
+  }
+  .gdiamond-legend{
+    width:7px; height:7px; display:inline-block; transform:rotate(45deg);
+    border:2px solid; background:#fff; flex-shrink:0;
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:#ffffff;
+    display:flex; align-items:flex-start; justify-content:center; padding:40px 20px;
+    z-index:50; overflow-y:auto;
+  }
+  .modal{
+    background:#fff; width:100%; max-width:480px; border:1px solid var(--line-strong);
+    box-shadow:0 8px 28px rgba(30,42,47,0.18);
+  }
+  .modal-head{
+    padding:18px 22px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .modal-head h3{margin:0; font-size:16px; font-weight:600;}
+  .modal-body{padding:20px 22px;}
+  .modal-foot{padding:16px 22px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:8px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:5px; font-weight:500;}
+  .field input, .field textarea{
+    width:100%; border:1px solid var(--line-strong); padding:9px 10px; font-size:13.5px;
+    font-family:inherit; border-radius:3px; color:var(--ink); background:#fff;
+  }
+  .field textarea{resize:vertical; min-height:60px;}
+  .field-row{display:flex; gap:12px;}
+  .field-row .field{flex:1;}
+
+  @media (max-width:820px){
+    .rail{position:fixed; z-index:40; width:250px; transform:translateX(-100%); transition:transform .2s;}
+    .rail.open{transform:translateX(0);}
+    .main{width:100%;}
+    .content{padding:18px 14px;}
+    .topbar{padding:14px 16px; flex-wrap:wrap; gap:10px;}
+    .field-row{flex-direction:column; gap:0;}
+    .modal-overlay{padding:0; align-items:stretch;}
+    .modal{max-width:100%; width:100%; min-height:100vh;}
+    .stat-block{min-width:130px;}
+    .kanban{flex-direction:column; overflow-x:visible;}
+    .kanban-col{min-width:100%;}
+  }
+  .rail-toggle{display:none; font-size:18px; line-height:1; padding:8px 11px;}
+  @media (max-width:820px){
+    .rail-toggle{display:inline-flex; align-items:center; justify-content:center;}
+  }
+  .rail-backdrop{display:none;}
+  @media (max-width:820px){
+    .rail-backdrop{
+      display:block; position:fixed; inset:0; background:rgba(20,26,28,0.45); z-index:39;
+    }
+  }
+  .table-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STAGES = [
+    {key:'not_started', label:'未開始', color:'var(--ink-soft)'},
+    {key:'processing',  label:'加工中', color:'var(--amber)'},
+    {key:'qc',          label:'油漆中', color:'var(--steel)'},
+    {key:'complete',    label:'完成',   color:'var(--green)'}
+  ];
+  var ORDER_STATUS_TAG = {
+    '待確認':'st-pending', '生產中':'st-inprogress', '已完成':'st-done',
+    '已出貨':'st-shipped', '取消':'st-cancelled'
+  };
+
+  var state = {
+    view: 'dashboard',
+    orders: [],
+    loaded: false,
+    search: '',
+    statusFilter: '全部',
+    modal: null, // {mode:'add'|'edit', order:{...}, error:''}
+    confirmDialog: null, // {message, onConfirm}
+    railOpen: false,
+    productionSubView: 'kanban' // 'kanban' | 'gantt'
+  };
+
+  // ---------- storage helpers ----------
+  function dateToStr(d){
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function todayStr(){
+    return dateToStr(new Date());
+  }
+  function toDate(s){ return new Date(s+'T00:00:00'); }
+  function addDays(d,n){ var r = new Date(d); r.setDate(r.getDate()+n); return r; }
+  function diffDays(a,b){ return Math.round((b-a)/86400000); }
+  function stageColor(key){
+    var s = STAGES.filter(function(x){return x.key===key;})[0];
+    return s ? s.color : 'var(--ink-soft)';
+  }
+  var WEEKDAY_LABELS = ['日','一','二','三','四','五','六']; // index = Date.getDay()
+  function addWorkDays(start, workDays){
+    // 從 start 起算，跳過週六、週日，回傳涵蓋 workDays 個工作天後的（不含）結束日
+    var d = new Date(start);
+    var counted = 0;
+    while(counted < workDays){
+      var dow = d.getDay();
+      if(dow !== 0 && dow !== 6){ counted++; }
+      d = addDays(d,1);
+    }
+    return d;
+  }
+  var ganttMeta = {DW:0, minDate:null}; // 記錄目前甘特圖比例，供色條拖曳換算日期用
+
+  // ---------- storage backend ----------
+  // 在這裡貼上你部署好的 Google Apps Script「網頁應用程式」網址，
+  // 貼上後所有使用者開啟這個網頁，都會讀寫同一份 Google Sheet 資料，達成多人共用。
+  // 若留空，則維持原本的單機儲存（Claude.ai 內用 window.storage，一般網站空間用 localStorage）。
+  var SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbznkqcOBSnqVIqjrNCmsR19f_cuiilaCLvQnWdAsx8ay556GgiuoMZbCglPpbqLrM_1ug/exec'; // 例如：'https://script.google.com/macros/s/xxxxx/exec'
+
+  var sheetBackend = {
+    get: function(){
+      return fetch(SHEET_API_URL, {method:'GET', cache:'no-store'})
+        .then(function(res){ return res.json(); })
+        .then(function(arr){ return JSON.stringify(arr || []); });
+    },
+    set: function(key, value){
+      return fetch(SHEET_API_URL, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'}, // 避免觸發 CORS 預檢請求
+        body: JSON.stringify({orders: JSON.parse(value)})
+      }).then(function(res){ return res.json(); });
+    }
+  };
+
+  var localBackend = (window.storage && typeof window.storage.get === 'function') ? {
+    get: function(key){
+      return window.storage.get(key, false).then(function(res){ return res ? res.value : null; });
+    },
+    set: function(key, value){
+      return window.storage.set(key, value, false);
+    }
+  } : {
+    get: function(key){
+      return new Promise(function(resolve){
+        try{ resolve(localStorage.getItem('shopfloor_'+key)); }
+        catch(e){ resolve(null); }
+      });
+    },
+    set: function(key, value){
+      return new Promise(function(resolve, reject){
+        try{ localStorage.setItem('shopfloor_'+key, value); resolve(true); }
+        catch(e){ reject(e); }
+      });
+    }
+  };
+
+  var storageBackend = SHEET_API_URL ? sheetBackend : localBackend;
+
+  function loadOrders(){
+    storageBackend.get('orders').then(function(value){
+      state.orders = value ? JSON.parse(value) : [];
+      state.loaded = true;
+      render();
+    }).catch(function(err){
+      console.error('讀取失敗', err);
+      state.loaded = true;
+      render();
+    });
+  }
+
+  function saveOrders(){
+    return storageBackend.set('orders', JSON.stringify(state.orders)).catch(function(err){
+      console.error('儲存失敗', err);
+    });
+  }
+
+  // 有設定共用資料庫時，定期向 Google Sheet 拉取最新資料，讓其他人的更新也會同步顯示。
+  // 編輯視窗開啟中暫停輪詢，避免正在輸入時畫面被重整。
+  if(SHEET_API_URL){
+    setInterval(function(){
+      if(!state.modal && !state.confirmDialog){ loadOrders(); }
+    }, 8000);
+  }
+
+  function nextOrderCode(){
+    var maxNum = 0;
+    state.orders.forEach(function(o){
+      var m = /ORD-(\d+)/.exec(o.code||'');
+      if(m){ maxNum = Math.max(maxNum, parseInt(m[1],10)); }
+    });
+    return 'ORD-' + String(maxNum+1).padStart(4,'0');
+  }
+
+  // ---------- render root ----------
+  function render(){
+    var app = document.getElementById('app');
+    if(!state.loaded){
+      app.innerHTML = '<div style="padding:60px; font-family:IBM Plex Mono, monospace; color:#5B6B70;">載入中…</div>';
+      return;
+    }
+    app.innerHTML =
+      renderRail() +
+      (state.railOpen ? '<div class="rail-backdrop" data-action="close-rail"></div>' : '') +
+      '<div class="main">' +
+        renderTopbar() +
+        '<div class="content">' + renderView() + '</div>' +
+      '</div>' +
+      renderModal() +
+      renderConfirmDialog();
+    attachEvents();
+  }
+
+  function renderRail(){
+    var items = [
+      {key:'dashboard', label:'總覽'},
+      {key:'orders', label:'訂單管理'},
+      {key:'production', label:'生產管理'}
+    ];
+    var itemsHtml = items.map(function(it){
+      return '<div class="rail-item '+(state.view===it.key?'active':'')+'" data-nav="'+it.key+'">'+
+        '<span class="dot"></span>'+it.label+'</div>';
+    }).join('');
+    return '<div class="rail '+(state.railOpen?'open':'')+'">' +
+      '<div class="rail-brand"><div class="mark">SHOP · FLOOR</div><div class="title">工單控制台</div></div>' +
+      '<div class="rail-nav">'+itemsHtml+'</div>' +
+      '<div class="rail-foot">共 '+state.orders.length+' 筆訂單<br>本機儲存 · 僅供此裝置</div>' +
+    '</div>';
+  }
+
+  function viewTitles(){
+    return {
+      dashboard:{h:'總覽', sub:'訂單與生產進度一覽'},
+      orders:{h:'訂單管理', sub:'建立、編輯與追蹤客戶訂單'},
+      production:{h:'生產管理', sub:'依生產階段追蹤各訂單進度'}
+    };
+  }
+
+  function renderTopbar(){
+    var t = viewTitles()[state.view];
+    var actionBtn = '';
+    if(state.view === 'orders'){
+      actionBtn = '<button class="btn btn-primary" data-action="new-order">+ 新增訂單</button>';
+    }
+    return '<div class="topbar">' +
+      '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' +
+        '<button class="btn btn-ghost rail-toggle" data-action="toggle-rail" aria-label="選單">☰</button>' +
+        '<div><h1>'+t.h+'</h1><div class="sub">'+t.sub+'</div></div>' +
+      '</div>' +
+      '<div>'+actionBtn+'</div>' +
+    '</div>';
+  }
+
+  function renderView(){
+    if(state.view === 'dashboard') return renderDashboard();
+    if(state.view === 'orders') return renderOrders();
+    if(state.view === 'production') return renderProduction();
+    return '';
+  }
+
+  // ---------- Dashboard ----------
+  function renderDashboard(){
+    var orders = state.orders;
+    if(orders.length === 0){
+      return '<div class="panel"><div class="empty-state">' +
+        '<div class="big">還沒有任何訂單</div>' +
+        '<div class="small">建立第一張訂單，開始追蹤生產進度。</div>' +
+        '<button class="btn btn-primary" data-action="new-order">+ 新增訂單</button>' +
+      '</div></div>';
+    }
+    var counts = {};
+    Object.keys(ORDER_STATUS_TAG).forEach(function(k){counts[k]=0;});
+    orders.forEach(function(o){ counts[o.status] = (counts[o.status]||0)+1; });
+
+    var stageCounts = {};
+    STAGES.forEach(function(s){stageCounts[s.key]=0;});
+    orders.forEach(function(o){
+      if(o.production && stageCounts.hasOwnProperty(o.production.stage)){
+        stageCounts[o.production.stage]++;
+      }
+    });
+    var maxStage = Math.max.apply(null, STAGES.map(function(s){return stageCounts[s.key];}).concat([1]));
+
+    var statHtml = ['待確認','生產中','已完成','已出貨'].map(function(k){
+      return '<div class="stat-block"><div class="num mono">'+counts[k]+'</div><div class="label">'+k+'</div></div>';
+    }).join('');
+
+    var barsHtml = STAGES.map(function(s){
+      var c = stageCounts[s.key];
+      var pct = Math.round((c / maxStage) * 100);
+      return '<div class="bar-row">' +
+        '<div class="bar-label">'+s.label+'</div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%; background:'+s.color+';"></div></div>' +
+        '<div class="bar-count">'+c+'</div>' +
+      '</div>';
+    }).join('');
+
+    // upcoming due dates
+    var upcoming = orders.filter(function(o){ return o.status!=='已出貨' && o.status!=='取消' && o.dueDate; })
+      .sort(function(a,b){ return (a.dueDate||'').localeCompare(b.dueDate||''); });
+    var upcomingHeader = upcoming.length ? '<div class="upcoming-row head">' +
+        '<span>交期</span>' +
+        '<span>客戶－產品</span>' +
+        '<span>狀態</span>' +
+      '</div>' : '';
+    var upcomingHtml = upcoming.length ? upcoming.map(function(o){
+      var label = esc(o.customer)+' － '+esc(o.product);
+      return '<div class="upcoming-row">' +
+        '<span class="mono" style="color:var(--ink-soft); font-size:12.5px;">'+o.dueDate+'</span>' +
+        '<span class="cell-ellipsis" style="font-size:13px;" title="'+label+'">'+label+'</span>' +
+        '<span class="tag '+ORDER_STATUS_TAG[o.status]+'">'+o.status+'</span>' +
+      '</div>';
+    }).join('') : '<div style="color:var(--ink-soft); font-size:13px;">目前沒有待處理的交期</div>';
+
+    return '<div class="stat-row">'+statHtml+'</div>' +
+      '<div class="panel"><h2>生產階段分布</h2>'+barsHtml+'</div>' +
+      '<div class="panel"><h2>即將到期（'+upcoming.length+' 筆）</h2>' +
+        upcomingHeader +
+        '<div style="max-height:420px; overflow-y:auto;">'+upcomingHtml+'</div>' +
+      '</div>';
+  }
+
+  // ---------- Orders ----------
+  function filteredOrders(){
+    return state.orders.filter(function(o){
+      var matchesSearch = !state.search ||
+        (o.customer+o.product+(o.spec||'')+o.code).toLowerCase().indexOf(state.search.toLowerCase()) >= 0;
+      var matchesStatus = state.statusFilter === '全部' || o.status === state.statusFilter;
+      return matchesSearch && matchesStatus;
+    }).sort(function(a,b){ return (b.createdAt||'').localeCompare(a.createdAt||''); });
+  }
+
+  function renderOrders(){
+    var list = filteredOrders();
+    var statusOptions = ['全部'].concat(Object.keys(ORDER_STATUS_TAG));
+    var toolbar = '<div class="toolbar">' +
+      '<input type="text" id="search-input" placeholder="搜尋客戶或產品" value="'+esc(state.search)+'">' +
+      '<select id="status-filter">' + statusOptions.map(function(s){
+        return '<option value="'+s+'" '+(s===state.statusFilter?'selected':'')+'>'+s+'</option>';
+      }).join('') + '</select>' +
+      '<div class="spacer"></div>' +
+    '</div>';
+
+    if(state.orders.length === 0){
+      return toolbar + '<div class="panel"><div class="empty-state">' +
+        '<div class="big">還沒有任何訂單</div>' +
+        '<div class="small">點右上角「新增訂單」建立第一筆資料。</div>' +
+      '</div></div>';
+    }
+    if(list.length === 0){
+      return toolbar + '<div class="panel"><div class="empty-state"><div class="big">找不到符合條件的訂單</div><div class="small">試試調整搜尋字詞或狀態篩選。</div></div></div>';
+    }
+
+    var rows = list.map(function(o){
+      var canStartProd = o.status === '待確認';
+      var canShip = o.status === '已完成';
+      var actions = '<button class="btn btn-sm btn-ghost" data-action="edit-order" data-id="'+o.id+'">編輯</button>';
+      if(canStartProd){
+        actions += '<button class="btn btn-sm" data-action="start-production" data-id="'+o.id+'">開始生產</button>';
+      }
+      if(canShip){
+        actions += '<button class="btn btn-sm" data-action="mark-shipped" data-id="'+o.id+'">標記出貨</button>';
+      }
+      if(o.status !== '取消' && o.status !== '已出貨'){
+        actions += '<button class="btn btn-sm btn-danger-ghost" data-action="cancel-order" data-id="'+o.id+'">取消</button>';
+      }
+      actions += '<button class="btn btn-sm btn-danger-ghost" data-action="delete-order" data-id="'+o.id+'">刪除</button>';
+
+      return '<tr>' +
+        '<td class="mono">'+(o.orderDate||'—')+'</td>' +
+        '<td>'+esc(o.customer)+'</td>' +
+        '<td>'+esc(o.product)+'</td>' +
+        '<td style="color:var(--ink-soft);">'+(o.spec?esc(o.spec):'—')+'</td>' +
+        '<td class="mono">'+o.qty+'</td>' +
+        '<td class="mono">'+(o.dueDate||'—')+'</td>' +
+        '<td><span class="tag '+ORDER_STATUS_TAG[o.status]+'">'+o.status+'</span></td>' +
+        '<td><div class="actions-cell">'+actions+'</div></td>' +
+      '</tr>';
+    }).join('');
+
+    return toolbar + '<div class="table-scroll"><table><thead><tr>' +
+      '<th>訂單日期</th><th>客戶</th><th>產品</th><th>規格</th><th>數量</th><th>交期</th><th>狀態</th><th>操作</th>' +
+      '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+
+  // ---------- Production ----------
+  function renderProductionTabs(){
+    return '<div class="toolbar">' +
+      '<button class="btn btn-sm '+(state.productionSubView==='kanban'?'btn-primary':'')+'" data-action="prod-view" data-mode="kanban">看板</button>' +
+      '<button class="btn btn-sm '+(state.productionSubView==='gantt'?'btn-primary':'')+'" data-action="prod-view" data-mode="gantt">甘特圖</button>' +
+    '</div>';
+  }
+
+  function renderProduction(){
+    var tabs = renderProductionTabs();
+
+    if(state.productionSubView === 'gantt'){
+      var ganttOrders = state.orders.filter(function(o){ return o.status !== '取消' && o.status !== '待確認'; });
+      if(ganttOrders.length === 0){
+        return tabs + '<div class="panel"><div class="empty-state">' +
+          '<div class="big">還沒有可排程的訂單</div>' +
+          '<div class="small">將訂單標記為「開始生產」後，就會出現在時程表上。</div>' +
+          '<button class="btn btn-primary" data-action="goto-orders">前往訂單管理</button>' +
+        '</div></div>';
+      }
+      return tabs + renderGantt(ganttOrders);
+    }
+
+    var active = state.orders.filter(function(o){
+      return o.production && o.status !== '取消' && o.status !== '已出貨';
+    });
+
+    if(active.length === 0){
+      return tabs + '<div class="panel"><div class="empty-state">' +
+        '<div class="big">目前沒有生產中的訂單</div>' +
+        '<div class="small">到「訂單管理」將已確認的訂單標記為「開始生產」，就會出現在這裡。</div>' +
+        '<button class="btn btn-primary" data-action="goto-orders">前往訂單管理</button>' +
+      '</div></div>';
+    }
+
+    var cols = STAGES.map(function(stage, idx){
+      var cards = active.filter(function(o){ return o.production.stage === stage.key; });
+      var cardsHtml = cards.map(function(o){
+        var p = o.production;
+        var pct = o.qty > 0 ? Math.min(100, Math.round((p.producedQty / o.qty) * 100)) : 0;
+        var prevKey = idx>0 ? STAGES[idx-1].key : null;
+        var nextKey = idx<STAGES.length-1 ? STAGES[idx+1].key : null;
+        var btns = '';
+        if(prevKey){
+          btns += '<button class="btn btn-sm btn-ghost" data-action="move-stage" data-id="'+o.id+'" data-stage="'+prevKey+'">← 上階段</button>';
+        }
+        if(nextKey){
+          btns += '<button class="btn btn-sm btn-primary" data-action="move-stage" data-id="'+o.id+'" data-stage="'+nextKey+'">下階段 →</button>';
+        } else {
+          btns += '<button class="btn btn-sm btn-primary" data-action="finish-production" data-id="'+o.id+'">完工入庫</button>';
+        }
+        return '<div class="kcard">' +
+          '<div class="kproduct">'+esc(o.product)+(o.spec?' <span style="font-weight:400; color:var(--ink-soft); font-size:12px;">· '+esc(o.spec)+'</span>':'')+'</div>' +
+          '<div class="kcustomer">'+esc(o.customer)+' · 交期 '+(o.dueDate||'—')+'</div>' +
+          '<div class="field-label">負責人 / 產線</div>' +
+          '<input type="text" class="assignee" data-id="'+o.id+'" data-field="assignee" value="'+esc(p.assignee||'')+'" placeholder="未指派">' +
+          '<div class="progress-row">' +
+            '<input type="number" min="0" max="'+o.qty+'" value="'+p.producedQty+'" data-id="'+o.id+'" data-field="producedQty">' +
+            '<div class="ptrack"><div class="pfill" style="width:'+pct+'%;"></div></div>' +
+            '<div class="ptext">'+p.producedQty+'/'+o.qty+'</div>' +
+          '</div>' +
+          '<div class="kactions">'+btns+'</div>' +
+        '</div>';
+      }).join('');
+
+      return '<div class="kanban-col">' +
+        '<div class="kanban-col-head">' +
+          '<span><span class="stripe" style="background:'+stage.color+';"></span>'+stage.label+'</span>' +
+          '<span class="count">'+cards.length+'</span>' +
+        '</div>' +
+        '<div class="kanban-cards">'+(cardsHtml || '<div style="font-size:12.5px; color:var(--ink-soft); padding:6px 2px;">（無）</div>')+'</div>' +
+      '</div>';
+    }).join('');
+
+    return tabs + '<div class="kanban">'+cols+'</div>';
+  }
+
+  // ---------- Gantt ----------
+  function renderGantt(list){
+    var SIDE_W = window.innerWidth <= 600 ? 160 : 240;
+    var items = list.map(function(o){
+      var start = (o.production && o.production.startDate) ? toDate(o.production.startDate) : toDate(o.orderDate || todayStr());
+      var end;
+      if(o.estHours){
+        // 依「預估工時」欄位換算工期（以每日 8 小時計，週六、週日不計入工期）
+        var days = Math.max(1, Math.ceil(o.estHours/8));
+        end = addWorkDays(start, days);
+      } else if(o.dueDate){
+        end = toDate(o.dueDate);
+      } else {
+        end = addWorkDays(start, 3);
+      }
+      if(end < start) end = start;
+      var due = o.dueDate ? toDate(o.dueDate) : null;
+      return {order:o, start:start, end:end, due:due};
+    });
+
+    var minDate = items.reduce(function(m,it){ return it.start<m ? it.start : m; }, items[0].start);
+    var maxDate = items.reduce(function(m,it){
+      var e = (it.due && it.due>it.end) ? it.due : it.end;
+      return e>m ? e : m;
+    }, items[0].end);
+    minDate = addDays(minDate,-1);
+    maxDate = addDays(maxDate,2);
+    var totalDays = Math.max(diffDays(minDate,maxDate),1);
+    var DW = totalDays>75 ? 14 : totalDays>40 ? 20 : totalDays>20 ? 28 : 38;
+    var timelineW = totalDays*DW;
+    var todayOffset = diffDays(minDate, toDate(todayStr()));
+    ganttMeta.DW = DW;
+    ganttMeta.minDate = minDate;
+
+    var dayCells = '';
+    var weekdayCells = '';
+    var monthSegs = []; var curMonth=null, span=0, label='';
+    for(var i=0;i<totalDays;i++){
+      var d = addDays(minDate,i);
+      var mkey = d.getFullYear()+'-'+d.getMonth();
+      if(mkey !== curMonth){
+        if(curMonth!==null) monthSegs.push({label:label, span:span});
+        curMonth = mkey; span = 1; label = (d.getMonth()+1)+'月';
+      } else { span++; }
+      var weekend = (d.getDay()===0 || d.getDay()===6);
+      weekdayCells += '<div class="gweekday'+(weekend?' weekend':'')+'" style="width:'+DW+'px;">'+WEEKDAY_LABELS[d.getDay()]+'</div>';
+      dayCells += '<div class="gday'+(weekend?' weekend':'')+'" style="width:'+DW+'px;">'+d.getDate()+'</div>';
+    }
+    monthSegs.push({label:label, span:span});
+    var monthCells = monthSegs.map(function(m){
+      return '<div class="gmonth" style="width:'+(m.span*DW)+'px;">'+m.label+'</div>';
+    }).join('');
+
+    var rowsHtml = items.map(function(it){
+      var o = it.order;
+      var stage = o.production ? o.production.stage : null;
+      var color = o.status === '已出貨' ? 'var(--plum)' : (stage ? stageColor(stage) : 'var(--ink-soft)');
+      var left = diffDays(minDate, it.start)*DW;
+      var width = Math.max(diffDays(it.start,it.end)*DW, Math.round(DW*0.9));
+      var draggable = !!(o.production && o.production.stage === 'not_started');
+      var dueMarker = '';
+      if(it.due){
+        var dueLeft = diffDays(minDate, it.due)*DW;
+        var overdue = it.due < it.end;
+        dueMarker = '<div class="gdue-marker" style="left:'+(dueLeft-4)+'px; border-color:'+(overdue?'var(--rust)':'var(--steel)')+';" title="交期 '+o.dueDate+'"></div>';
+      }
+      var barTitle = o.product+'（'+(o.estHours?'預估工時 '+o.estHours+'小時':'無預估工時')+'）'+(draggable?' · 可拖曳調整生產起始日':'');
+      return '<div class="grow">' +
+        '<div class="gcell-side" style="width:'+SIDE_W+'px;">' +
+          '<div class="gside-name">'+esc(o.product)+'</div>' +
+          '<div class="gside-cust">'+esc(o.customer)+'</div>' +
+        '</div>' +
+        '<div class="gcell-time" style="width:'+timelineW+'px; background-image:linear-gradient(to right, var(--line) 1px, transparent 1px); background-size:'+DW+'px 100%;">' +
+          '<div class="gbar '+(draggable?'gbar-drag':'gbar-fixed')+'" data-action="edit-order" data-id="'+o.id+'" style="left:'+left+'px; width:'+width+'px; background:'+color+';" title="'+esc(barTitle)+'">' +
+            '<span class="gbar-label">'+esc(o.product)+'</span>' +
+          '</div>' +
+          dueMarker +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    var todayLine = (todayOffset>=0 && todayOffset<=totalDays)
+      ? '<div class="gtoday-line" style="left:'+(SIDE_W+todayOffset*DW)+'px;"><span>今天</span></div>'
+      : '';
+
+    var legend = '<div class="gantt-legend">' + STAGES.map(function(s){
+      return '<span class="glegend-item"><span class="gdot" style="background:'+s.color+';"></span>'+s.label+'</span>';
+    }).join('') +
+      '<span class="glegend-item"><span class="gdot" style="background:var(--plum);"></span>已出貨</span>' +
+      '<span class="glegend-item"><span class="gdiamond-legend" style="border-color:var(--steel);"></span>交期</span>' +
+      '<span class="glegend-item"><span class="gdiamond-legend" style="border-color:var(--rust);"></span>交期已超出工期</span>' +
+    '</div>';
+
+    return legend +
+      '<div class="gantt-scroll-outer"><div class="gantt-content">' +
+        todayLine +
+        '<div class="grow ghead">' +
+          '<div class="gcell-side" style="width:'+SIDE_W+'px;">訂單 / 產品</div>' +
+          '<div class="gcell-time" style="width:'+timelineW+'px;">' +
+            '<div class="gmonth-row">'+monthCells+'</div>' +
+            '<div class="gweekday-row">'+weekdayCells+'</div>' +
+            '<div class="gday-row">'+dayCells+'</div>' +
+          '</div>' +
+        '</div>' +
+        rowsHtml +
+      '</div></div>';
+  }
+
+  // ---------- Modal ----------
+  function renderModal(){
+    if(!state.modal) return '';
+    var isEdit = state.modal.mode === 'edit';
+    var o = state.modal.order;
+    var errorHtml = state.modal.error
+      ? '<div style="background:var(--rust-tint); color:var(--rust); border:1px solid var(--rust); padding:8px 12px; font-size:13px; margin-bottom:14px; border-radius:3px;">'+esc(state.modal.error)+'</div>'
+      : '';
+    return '<div class="modal-overlay" id="modal-overlay">' +
+      '<div class="modal">' +
+        '<div class="modal-head"><h3>'+(isEdit?'編輯訂單':'新增訂單')+'</h3>' +
+          '<button class="btn btn-ghost" data-action="close-modal">✕</button></div>' +
+        '<div class="modal-body">' +
+          errorHtml +
+          '<div class="field"><label>客戶名稱</label><input type="text" id="f-customer" value="'+esc(o.customer)+'"></div>' +
+          '<div class="field-row">' +
+            '<div class="field"><label>產品名稱</label><input type="text" id="f-product" value="'+esc(o.product)+'"></div>' +
+            '<div class="field"><label>規格</label><input type="text" id="f-spec" placeholder="例如：尺寸、版本等" value="'+esc(o.spec||'')+'"></div>' +
+            '<div class="field"><label>材質／顏色</label><input type="text" id="f-material" value="'+esc(o.material||'')+'"></div>' +
+          '</div>' +
+          '<div class="field-row">' +
+            '<div class="field"><label>數量</label><input type="number" min="1" id="f-qty" value="'+o.qty+'"></div>' +
+            '<div class="field"><label>單價（選填）</label><input type="number" min="0" id="f-price" value="'+(o.unitPrice||'')+'"></div>' +
+          '</div>' +
+          '<div class="field-row">' +
+            '<div class="field"><label>訂單日期</label><input type="date" id="f-orderdate" value="'+(o.orderDate||todayStr())+'"></div>' +
+            '<div class="field"><label>交期</label><input type="date" id="f-duedate" value="'+(o.dueDate||'')+'"></div>' +
+          '</div>' +
+          '<div class="field"><label>預估工時（小時）</label><input type="number" min="0" step="0.5" id="f-hours" value="'+(o.estHours!=null?o.estHours:'')+'"></div>' +
+          '<div class="field"><label>備註</label><textarea id="f-notes">'+esc(o.notes||'')+'</textarea></div>' +
+        '</div>' +
+        '<div class="modal-foot">' +
+          '<button class="btn" data-action="close-modal">取消</button>' +
+          '<button class="btn btn-primary" data-action="save-order">儲存</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderConfirmDialog(){
+    if(!state.confirmDialog) return '';
+    return '<div class="modal-overlay" id="confirm-overlay">' +
+      '<div class="modal" style="max-width:380px;">' +
+        '<div class="modal-body" style="padding-top:22px;">' +
+          '<p style="margin:0; font-size:13.5px; line-height:1.7; color:var(--ink);">'+esc(state.confirmDialog.message)+'</p>' +
+        '</div>' +
+        '<div class="modal-foot">' +
+          '<button class="btn" data-action="confirm-cancel">取消</button>' +
+          '<button class="btn btn-primary" data-action="confirm-ok">確定</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function esc(s){
+    if(s===undefined || s===null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ---------- Events ----------
+  function attachEvents(){
+    var app = document.getElementById('app');
+
+    app.querySelectorAll('[data-nav]').forEach(function(el){
+      el.addEventListener('click', function(){
+        state.view = el.getAttribute('data-nav');
+        state.railOpen = false;
+        render();
+      });
+    });
+
+    app.querySelectorAll('[data-action]').forEach(function(el){
+      if(el.classList.contains('gbar-drag')) return; // 交由 bindGanttDrag 處理（含拖曳判斷）
+      el.addEventListener('click', function(e){
+        var action = el.getAttribute('data-action');
+        var id = el.getAttribute('data-id');
+        handleAction(action, id, el);
+      });
+    });
+
+    var searchInput = document.getElementById('search-input');
+    if(searchInput){
+      searchInput.addEventListener('input', function(){
+        state.search = searchInput.value;
+        var pos = searchInput.selectionStart;
+        render();
+        var again = document.getElementById('search-input');
+        if(again){ again.focus(); again.setSelectionRange(pos,pos); }
+      });
+    }
+    var statusFilter = document.getElementById('status-filter');
+    if(statusFilter){
+      statusFilter.addEventListener('change', function(){
+        state.statusFilter = statusFilter.value;
+        render();
+      });
+    }
+
+    // production inline fields
+    app.querySelectorAll('[data-field]').forEach(function(el){
+      el.addEventListener('change', function(){
+        var id = el.getAttribute('data-id');
+        var field = el.getAttribute('data-field');
+        var order = state.orders.find(function(o){return o.id===id;});
+        if(!order || !order.production) return;
+        if(field === 'producedQty'){
+          var v = parseInt(el.value,10);
+          if(isNaN(v) || v<0) v = 0;
+          if(v > order.qty) v = order.qty;
+          order.production.producedQty = v;
+        } else if(field === 'assignee'){
+          order.production.assignee = el.value;
+        }
+        saveOrders();
+      });
+    });
+
+    bindGanttDrag();
+  }
+
+  // ---------- Gantt bar drag-to-reschedule ----------
+  function bindGanttDrag(){
+    document.querySelectorAll('.gbar-drag').forEach(function(el){
+      var id = el.getAttribute('data-id');
+      el.addEventListener('pointerdown', function(e){
+        if(e.pointerType === 'mouse' && e.button !== 0) return;
+        var order = state.orders.filter(function(o){ return o.id === id; })[0];
+        if(!order || !order.production || order.production.stage !== 'not_started') return;
+        e.preventDefault();
+        el.setPointerCapture(e.pointerId);
+        var startX = e.clientX;
+        var origLeft = parseFloat(el.style.left) || 0;
+        var moved = false;
+        el.classList.add('dragging');
+
+        function onMove(ev){
+          var dx = ev.clientX - startX;
+          if(Math.abs(dx) > 3) moved = true;
+          el.style.left = (origLeft + dx) + 'px';
+        }
+        function onUp(ev){
+          el.releasePointerCapture(e.pointerId);
+          el.removeEventListener('pointermove', onMove);
+          el.removeEventListener('pointerup', onUp);
+          el.classList.remove('dragging');
+          var dx = ev.clientX - startX;
+          var dayDelta = ganttMeta.DW ? Math.round(dx / ganttMeta.DW) : 0;
+          if(moved && dayDelta !== 0){
+            var base = toDate(order.production.startDate || order.orderDate || todayStr());
+            order.production.startDate = dateToStr(addDays(base, dayDelta));
+            saveOrders();
+            render();
+          } else if(!moved){
+            state.modal = {mode:'edit', order: Object.assign({}, order)};
+            render();
+          } else {
+            render(); // 拖曳距離不足一天，還原位置
+          }
+        }
+        el.addEventListener('pointermove', onMove);
+        el.addEventListener('pointerup', onUp);
+      });
+    });
+  }
+
+  function handleAction(action, id, el){
+    if(action === 'new-order'){
+      state.modal = {mode:'add', order:{customer:'',product:'',spec:'',material:'',qty:1,unitPrice:'',estHours:'',orderDate:todayStr(),dueDate:'',notes:''}};
+      render();
+    } else if(action === 'edit-order'){
+      var order = state.orders.find(function(o){return o.id===id;});
+      state.modal = {mode:'edit', order: Object.assign({}, order)};
+      render();
+    } else if(action === 'close-modal'){
+      state.modal = null;
+      render();
+    } else if(action === 'save-order'){
+      saveOrderFromModal();
+    } else if(action === 'start-production'){
+      var o = state.orders.find(function(x){return x.id===id;});
+      if(o){
+        o.status = '生產中';
+        o.production = {stage:'not_started', assignee:'', producedQty:0, startDate: todayStr()};
+        saveOrders(); render();
+      }
+    } else if(action === 'move-stage'){
+      var stage = el.getAttribute('data-stage');
+      var o2 = state.orders.find(function(x){return x.id===id;});
+      if(o2 && o2.production){
+        o2.production.stage = stage;
+        if(stage === 'complete'){ o2.status = '已完成'; o2.production.producedQty = o2.qty; }
+        saveOrders(); render();
+      }
+    } else if(action === 'finish-production'){
+      var o3 = state.orders.find(function(x){return x.id===id;});
+      if(o3){
+        o3.production.stage = 'complete';
+        o3.production.producedQty = o3.qty;
+        o3.status = '已完成';
+        saveOrders(); render();
+      }
+    } else if(action === 'mark-shipped'){
+      var o4 = state.orders.find(function(x){return x.id===id;});
+      if(o4){ o4.status = '已出貨'; saveOrders(); render(); }
+    } else if(action === 'cancel-order'){
+      var o5 = state.orders.find(function(x){return x.id===id;});
+      if(o5){
+        state.confirmDialog = {
+          message: '確定要取消「'+o5.customer+' － '+o5.product+'」這筆訂單嗎？',
+          onConfirm: function(){
+            o5.status = '取消'; saveOrders();
+          }
+        };
+        render();
+      }
+    } else if(action === 'delete-order'){
+      var o6 = state.orders.find(function(x){return x.id===id;});
+      if(o6){
+        state.confirmDialog = {
+          message: '確定要刪除「'+o6.customer+' － '+o6.product+'」這筆訂單嗎？此動作無法復原。',
+          onConfirm: function(){
+            state.orders = state.orders.filter(function(x){return x.id!==id;});
+            saveOrders();
+          }
+        };
+        render();
+      }
+    } else if(action === 'confirm-ok'){
+      var dlg = state.confirmDialog;
+      state.confirmDialog = null;
+      if(dlg && dlg.onConfirm){ dlg.onConfirm(); }
+      render();
+    } else if(action === 'confirm-cancel'){
+      state.confirmDialog = null;
+      render();
+    } else if(action === 'goto-orders'){
+      state.view = 'orders'; render();
+    } else if(action === 'prod-view'){
+      state.productionSubView = el.getAttribute('data-mode');
+      render();
+    } else if(action === 'toggle-rail'){
+      state.railOpen = !state.railOpen;
+      render();
+    } else if(action === 'close-rail'){
+      state.railOpen = false;
+      render();
+    }
+  }
+
+  function saveOrderFromModal(){
+    var customer = document.getElementById('f-customer').value.trim();
+    var product = document.getElementById('f-product').value.trim();
+    var spec = document.getElementById('f-spec').value.trim();
+    var material = document.getElementById('f-material').value.trim();
+    var qty = parseInt(document.getElementById('f-qty').value,10) || 1;
+    var unitPrice = document.getElementById('f-price').value;
+    var orderDate = document.getElementById('f-orderdate').value;
+    var dueDate = document.getElementById('f-duedate').value;
+    var estHoursVal = document.getElementById('f-hours').value;
+    var notes = document.getElementById('f-notes').value;
+
+    if(!customer || !product){
+      state.modal.error = '請輸入客戶名稱與產品名稱';
+      state.modal.order = Object.assign({}, state.modal.order, {
+        customer:customer, product:product, spec:spec, material:material, qty:qty,
+        unitPrice:unitPrice, orderDate:orderDate, dueDate:dueDate, estHours:estHoursVal, notes:notes
+      });
+      render();
+      return;
+    }
+
+    if(state.modal.mode === 'add'){
+      var newOrder = {
+        id: 'o_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+        code: nextOrderCode(),
+        customer: customer, product: product, spec: spec, material: material, qty: qty,
+        unitPrice: unitPrice ? parseFloat(unitPrice) : null,
+        estHours: estHoursVal ? parseFloat(estHoursVal) : null,
+        orderDate: orderDate, dueDate: dueDate, notes: notes,
+        status: '待確認',
+        production: null,
+        createdAt: new Date().toISOString()
+      };
+      state.orders.push(newOrder);
+    } else {
+      var existing = state.orders.find(function(o){return o.id === state.modal.order.id;});
+      if(existing){
+        existing.customer = customer; existing.product = product; existing.spec = spec; existing.material = material; existing.qty = qty;
+        existing.unitPrice = unitPrice ? parseFloat(unitPrice) : null;
+        existing.estHours = estHoursVal ? parseFloat(estHoursVal) : null;
+        existing.orderDate = orderDate; existing.dueDate = dueDate; existing.notes = notes;
+        if(existing.production){
+          existing.production.producedQty = Math.min(existing.production.producedQty, qty);
+        }
+      }
+    }
+    state.modal = null;
+    saveOrders();
+    render();
+  }
+
+  loadOrders();
+})();
+</script>
+</body>
+</html>
