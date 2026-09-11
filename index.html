@@ -138,6 +138,8 @@
     border-bottom:1px solid var(--line-strong); padding-bottom:8px;
   }
   .upcoming-row .cell-ellipsis{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .upcoming-row .cell-clickable{cursor:pointer;}
+  .upcoming-row .cell-clickable:hover{color:var(--steel); text-decoration:underline;}
   .upcoming-row .cell-due{text-align:right;}
   .empty-state{
     text-align:center; padding:50px 20px; color:var(--ink-soft);
@@ -154,7 +156,7 @@
   .toolbar .spacer{flex:1;}
 
   /* ---------- Table ---------- */
-  table{width:100%; min-width:760px; border-collapse:collapse; background:var(--panel); border:1px solid var(--line);}
+  table{width:100%; min-width:920px; border-collapse:collapse; background:var(--panel); border:1px solid var(--line);}
   thead th{
     text-align:left; font-size:11.5px; font-weight:600; color:var(--ink-soft);
     padding:10px 14px; border-bottom:1px solid var(--line-strong);
@@ -641,7 +643,7 @@
       var label = esc(o.customer)+' － '+esc(o.product);
       return '<div class="upcoming-row">' +
         '<span class="mono" style="color:var(--ink-soft); font-size:12.5px;">'+o.dueDate+'</span>' +
-        '<span class="cell-ellipsis" style="font-size:13px;" title="'+label+'">'+label+'</span>' +
+        '<span class="cell-ellipsis cell-clickable" style="font-size:13px;" title="'+label+'" data-action="edit-order" data-id="'+o.id+'">'+label+'</span>' +
         '<span class="tag '+ORDER_STATUS_TAG[o.status]+'">'+o.status+'</span>' +
       '</div>';
     }).join('') : '<div style="color:var(--ink-soft); font-size:13px;">目前沒有待處理的交期</div>';
@@ -693,6 +695,7 @@
         return '<option value="'+s.key+'" '+(s.key===state.sortBy?'selected':'')+'>'+s.label+'</option>';
       }).join('') + '</select>' +
       '<div class="spacer"></div>' +
+      '<button class="btn btn-sm" data-action="export-orders">⬇ 匯出訂單資料</button>' +
     '</div>';
 
     if(state.orders.length === 0){
@@ -721,19 +724,21 @@
       actions += '<button class="btn btn-sm btn-danger-ghost" data-action="delete-order" data-id="'+o.id+'">刪除</button>';
 
       return '<tr>' +
-        '<td class="mono">'+(o.orderDate||'—')+'</td>' +
+        '<td class="mono">'+(o.dueDate||'—')+'</td>' +
         '<td>'+esc(o.customer)+'</td>' +
         '<td>'+esc(o.product)+'</td>' +
         '<td style="color:var(--ink-soft);">'+(o.spec?esc(o.spec):'—')+'</td>' +
+        '<td style="color:var(--ink-soft);">'+(o.material?esc(o.material):'—')+'</td>' +
         '<td class="mono">'+o.qty+'</td>' +
-        '<td class="mono">'+(o.dueDate||'—')+'</td>' +
         '<td><span class="tag '+ORDER_STATUS_TAG[o.status]+'">'+o.status+'</span></td>' +
         '<td><div class="actions-cell">'+actions+'</div></td>' +
+        '<td class="mono">'+(o.orderDate||'—')+'</td>' +
+        '<td class="mono">'+(o.unitPrice!=null?o.unitPrice:'—')+'</td>' +
       '</tr>';
     }).join('');
 
     return toolbar + '<div class="table-scroll"><table><thead><tr>' +
-      '<th>訂單日期</th><th>客戶</th><th>產品</th><th>規格</th><th>數量</th><th>交期</th><th>狀態</th><th>操作</th>' +
+      '<th>交期</th><th>客戶</th><th>產品</th><th>規格</th><th>材質</th><th>數量</th><th>狀態</th><th>操作</th><th>訂單日期</th><th>單價</th>' +
       '</tr></thead><tbody>'+rows+'</tbody></table></div>';
   }
 
@@ -981,6 +986,38 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  // ---------- Export ----------
+  function csvCell_(v){
+    var s = (v === null || v === undefined) ? '' : String(v);
+    if(/[",\r\n]/.test(s)){ s = '"'+s.replace(/"/g,'""')+'"'; }
+    return s;
+  }
+
+  function exportOrdersCSV(list){
+    var headers = ['交期','客戶','產品','規格','材質／顏色','數量','單價','工時'];
+    var rows = list.map(function(o){
+      return [
+        o.dueDate||'', o.customer||'', o.product||'', o.spec||'', o.material||'',
+        o.qty||0, (o.unitPrice==null?'':o.unitPrice), (o.estHours==null?'':o.estHours)
+      ];
+    });
+
+    var lines = [headers].concat(rows).map(function(r){
+      return r.map(csvCell_).join(',');
+    });
+    var csvContent = '\ufeff' + lines.join('\r\n'); // BOM 讓 Excel 正確顯示中文
+
+    var blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '訂單清單_'+todayStr()+'.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  }
+
   // ---------- Events ----------
   function attachEvents(){
     var app = document.getElementById('app');
@@ -1175,6 +1212,8 @@
     } else if(action === 'close-rail'){
       state.railOpen = false;
       render();
+    } else if(action === 'export-orders'){
+      exportOrdersCSV(filteredOrders());
     }
   }
 
