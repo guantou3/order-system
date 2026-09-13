@@ -26,6 +26,8 @@
     --rust-tint:#F7E7E2;
     --plum:#7A4EA8;
     --plum-tint:#EEE7F5;
+    --slate:#5B6E93;
+    --slate-tint:#E8EBF2;
     --grey-tint:#EBEDEC;
     --rail:#1E2A2F;
     --rail-text:#C9D2D1;
@@ -176,6 +178,7 @@
     border-left:3px solid; background:var(--grey-tint); color:var(--ink);
   }
   .tag.st-pending{border-color:var(--ink-soft); background:var(--grey-tint);}
+  .tag.st-queued{border-color:var(--slate); background:var(--slate-tint); color:var(--slate);}
   .tag.st-inprogress{border-color:var(--amber); background:var(--amber-tint); color:#8A5714;}
   .tag.st-done{border-color:var(--green); background:var(--green-tint); color:#295C3B;}
   .tag.st-shipped{border-color:var(--steel); background:var(--steel-tint); color:var(--steel-dark);}
@@ -329,13 +332,13 @@
   "use strict";
 
   var STAGES = [
-    {key:'not_started', label:'未開始', color:'var(--ink-soft)'},
+    {key:'not_started', label:'排單中', color:'var(--slate)'},
     {key:'processing',  label:'加工中', color:'var(--amber)'},
     {key:'qc',          label:'油漆中', color:'var(--steel)'},
     {key:'complete',    label:'完成',   color:'var(--green)'}
   ];
   var ORDER_STATUS_TAG = {
-    '待確認':'st-pending', '生產中':'st-inprogress', '已完成':'st-done',
+    '待確認':'st-pending', '排單中':'st-queued', '生產中':'st-inprogress', '已完成':'st-done',
     '已出貨':'st-shipped', '取消':'st-cancelled'
   };
 
@@ -617,7 +620,7 @@
     });
     var maxStage = Math.max.apply(null, STAGES.map(function(s){return stageCounts[s.key];}).concat([1]));
 
-    var statHtml = ['待確認','生產中','已完成','已出貨'].map(function(k){
+    var statHtml = ['待確認','排單中','生產中','已完成','已出貨'].map(function(k){
       return '<div class="stat-block"><div class="num mono">'+counts[k]+'</div><div class="label">'+k+'</div></div>';
     }).join('');
 
@@ -1147,7 +1150,7 @@
     } else if(action === 'start-production'){
       var o = state.orders.find(function(x){return x.id===id;});
       if(o){
-        o.status = '生產中';
+        o.status = '排單中';
         o.production = {stage:'not_started', assignee:'', producedQty:0, startDate: todayStr()};
         saveOrders(); render();
       }
@@ -1156,7 +1159,9 @@
       var o2 = state.orders.find(function(x){return x.id===id;});
       if(o2 && o2.production){
         o2.production.stage = stage;
-        if(stage === 'complete'){ o2.status = '已完成'; o2.production.producedQty = o2.qty; }
+        if(stage === 'not_started'){ o2.status = '排單中'; }
+        else if(stage === 'complete'){ o2.status = '已完成'; o2.production.producedQty = o2.qty; }
+        else { o2.status = '生產中'; }
         saveOrders(); render();
       }
     } else if(action === 'finish-production'){
