@@ -711,7 +711,7 @@
       return toolbar + '<div class="panel"><div class="empty-state"><div class="big">找不到符合條件的訂單</div><div class="small">試試調整搜尋字詞或狀態篩選。</div></div></div>';
     }
 
-    var rows = list.map(function(o){
+    function buildRow(o){
       var canStartProd = o.status === '待確認';
       var canShip = o.status === '已完成';
       var actions = '<button class="btn btn-sm btn-ghost" data-action="edit-order" data-id="'+o.id+'">編輯</button>';
@@ -738,11 +738,28 @@
         '<td class="mono">'+(o.orderDate||'—')+'</td>' +
         '<td class="mono">'+(o.unitPrice!=null?o.unitPrice:'—')+'</td>' +
       '</tr>';
-    }).join('');
+    }
 
-    return toolbar + '<div class="table-scroll"><table><thead><tr>' +
-      '<th>交期</th><th>客戶</th><th>產品</th><th>規格</th><th>材質</th><th>數量</th><th>狀態</th><th>操作</th><th>訂單日期</th><th>單價</th>' +
-      '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    function buildTable(rowsList){
+      return '<div class="table-scroll"><table><thead><tr>' +
+        '<th>交期</th><th>客戶</th><th>產品</th><th>規格</th><th>材質</th><th>數量</th><th>狀態</th><th>操作</th><th>訂單日期</th><th>單價</th>' +
+        '</tr></thead><tbody>'+rowsList.map(buildRow).join('')+'</tbody></table></div>';
+    }
+
+    var mainList = list.filter(function(o){ return o.status !== '已出貨'; });
+    var shippedList = list.filter(function(o){ return o.status === '已出貨'; });
+
+    var mainHtml = mainList.length
+      ? buildTable(mainList)
+      : '<div class="panel"><div class="empty-state" style="padding:24px 20px;"><div class="small">沒有符合條件的進行中訂單。</div></div></div>';
+
+    var shippedHtml = '';
+    if(shippedList.length){
+      shippedHtml = '<h2 style="font-size:14px; font-weight:600; margin:24px 0 10px 0; color:var(--ink-soft);">已出貨（'+shippedList.length+' 筆）</h2>' +
+        buildTable(shippedList);
+    }
+
+    return toolbar + mainHtml + shippedHtml;
   }
 
   // ---------- Production ----------
