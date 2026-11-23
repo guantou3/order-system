@@ -774,11 +774,11 @@
     var tabs = renderProductionTabs();
 
     if(state.productionSubView === 'gantt'){
-      var ganttOrders = state.orders.filter(function(o){ return o.status !== '取消' && o.status !== '待確認'; });
+      var ganttOrders = state.orders.filter(function(o){ return o.status !== '取消' && o.status !== '待確認' && o.status !== '已出貨'; });
       if(ganttOrders.length === 0){
         return tabs + '<div class="panel"><div class="empty-state">' +
           '<div class="big">還沒有可排程的訂單</div>' +
-          '<div class="small">將訂單標記為「開始生產」後，就會出現在時程表上。</div>' +
+          '<div class="small">按下「開始生產」進入排單中後，就會出現在時程表上。</div>' +
           '<button class="btn btn-primary" data-action="goto-orders">前往訂單管理</button>' +
         '</div></div>';
       }
@@ -788,14 +788,35 @@
     var active = state.orders.filter(function(o){
       return o.production && o.status !== '取消' && o.status !== '已出貨';
     });
+    var pending = state.orders.filter(function(o){ return o.status === '待確認'; });
 
-    if(active.length === 0){
+    if(active.length === 0 && pending.length === 0){
       return tabs + '<div class="panel"><div class="empty-state">' +
-        '<div class="big">目前沒有生產中的訂單</div>' +
-        '<div class="small">到「訂單管理」將已確認的訂單標記為「開始生產」，就會出現在這裡。</div>' +
+        '<div class="big">目前沒有進行中的訂單</div>' +
+        '<div class="small">到「訂單管理」新增訂單後，就會出現在這裡。</div>' +
         '<button class="btn btn-primary" data-action="goto-orders">前往訂單管理</button>' +
       '</div></div>';
     }
+
+    // 「待確認」欄位：尚未排單的訂單（狀態為待確認），按「開始生產」後進入排單中
+    var pendingCards = pending.map(function(o){
+      return '<div class="kcard">' +
+        '<div class="kproduct">'+esc(o.product)+(o.spec?' <span style="font-weight:400; color:var(--ink-soft); font-size:12px;">· '+esc(o.spec)+'</span>':'')+'</div>' +
+        '<div class="kcustomer">'+esc(o.customer)+' · 交期 '+(o.dueDate||'—')+'</div>' +
+        '<div class="kcustomer" style="margin-bottom:0;">數量 '+o.qty+(o.material?' · '+esc(o.material):'')+'</div>' +
+        '<div class="kactions">' +
+          '<button class="btn btn-sm btn-primary" data-action="start-production" data-id="'+o.id+'">開始生產</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    var pendingCol = '<div class="kanban-col">' +
+      '<div class="kanban-col-head">' +
+        '<span><span class="stripe" style="background:var(--ink-soft);"></span>待確認</span>' +
+        '<span class="count">'+pending.length+'</span>' +
+      '</div>' +
+      '<div class="kanban-cards">'+(pendingCards || '<div style="font-size:12.5px; color:var(--ink-soft); padding:6px 2px;">（無）</div>')+'</div>' +
+    '</div>';
 
     var cols = STAGES.map(function(stage, idx){
       var cards = active.filter(function(o){ return o.production.stage === stage.key; });
@@ -811,7 +832,7 @@
         if(nextKey){
           btns += '<button class="btn btn-sm btn-primary" data-action="move-stage" data-id="'+o.id+'" data-stage="'+nextKey+'">下階段 →</button>';
         } else {
-          btns += '<button class="btn btn-sm btn-primary" data-action="finish-production" data-id="'+o.id+'">完工入庫</button>';
+          btns += '<button class="btn btn-sm btn-primary" data-action="mark-shipped" data-id="'+o.id+'">標記出貨</button>';
         }
         return '<div class="kcard">' +
           '<div class="kproduct">'+esc(o.product)+(o.spec?' <span style="font-weight:400; color:var(--ink-soft); font-size:12px;">· '+esc(o.spec)+'</span>':'')+'</div>' +
@@ -836,7 +857,7 @@
       '</div>';
     }).join('');
 
-    return tabs + '<div class="kanban">'+cols+'</div>';
+    return tabs + '<div class="kanban">'+pendingCol+cols+'</div>';
   }
 
   // ---------- Gantt ----------
@@ -927,7 +948,6 @@
     var legend = '<div class="gantt-legend">' + STAGES.map(function(s){
       return '<span class="glegend-item"><span class="gdot" style="background:'+s.color+';"></span>'+s.label+'</span>';
     }).join('') +
-      '<span class="glegend-item"><span class="gdot" style="background:var(--plum);"></span>已出貨</span>' +
       '<span class="glegend-item"><span class="gdiamond-legend" style="border-color:var(--steel);"></span>交期</span>' +
       '<span class="glegend-item"><span class="gdiamond-legend" style="border-color:var(--rust);"></span>交期已超出工期</span>' +
     '</div>';
@@ -1179,14 +1199,6 @@
         if(stage === 'not_started'){ o2.status = '排單中'; }
         else if(stage === 'complete'){ o2.status = '已完成'; o2.production.producedQty = o2.qty; }
         else { o2.status = '生產中'; }
-        saveOrders(); render();
-      }
-    } else if(action === 'finish-production'){
-      var o3 = state.orders.find(function(x){return x.id===id;});
-      if(o3){
-        o3.production.stage = 'complete';
-        o3.production.producedQty = o3.qty;
-        o3.status = '已完成';
         saveOrders(); render();
       }
     } else if(action === 'mark-shipped'){
